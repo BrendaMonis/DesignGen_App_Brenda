@@ -218,17 +218,17 @@ mod_MixedModel_server <- function(input, output, session){
       dat$peso <- as.double(dat$peso)
       
       if(input$design == "block"){
-        if(!all(c("local", "block", "gen") %in% colnames(dat)) | ("rep" %in% colnames(dat)))
+        if(!all(c("local", "block", "gen", "corte") %in% colnames(dat)) | ("rep" %in% colnames(dat)))
           stop(safeError("Randomized complete block design should have columns 'local', 'block' and 'gen'."))
-        dat <- dat %>% select(c("local", "gen", "block",input$trait)) %>%
+        dat <- dat %>% select(c("local", "gen", "block", "corte",input$trait)) %>%
           filter(local %in% input$local) %>% droplevels()
         
       } else {
-        if(!all(c("local", "block", "gen", "rep") %in% colnames(dat)))
+        if(!all(c("local", "block", "gen", "corte") %in% colnames(dat)))
           stop(safeError("Alpha lattice design should have columns 'local', 'block', 'rep', and 'gen'."))
         dat$rep <- as.factor(dat$rep)
         
-        dat <- dat %>% select(c("local", "gen", "block","rep",input$trait)) %>%
+        dat <- dat %>% select(c("local", "gen", "block","corte",input$trait)) %>%
           filter(local %in% input$local) %>% droplevels()
         
         dat$local <- as.factor(dat$rep)
