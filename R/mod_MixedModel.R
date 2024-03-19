@@ -8,7 +8,8 @@
 #'
 #' @importFrom shiny NS tagList 
 
-mod_MixedModel_ui <- function(id){
+# ui part ----
+mod_MixedModel_ui <- function(id){ 
   ns <- NS(id)
   tagList(
     fluidRow(style = "height:5000px",
@@ -63,6 +64,11 @@ mod_MixedModel_ui <- function(id){
                      checkboxGroupInput(ns("local"), label = p("Choose the location to be evaluated:"),
                                         choices = "Press 'Read the file' button to update",
                                         selected = "Press 'Read the file' button to update")
+                 ),
+                 box(width = 6,
+                     checkboxGroupInput(ns("corte"), label = p("Choose the harvest to be evaluated:"),
+                                        choices = "Press 'Read the file' button to update",
+                                        selected = "Press 'Read the file' button to update")
                  )
              ),
              
@@ -105,6 +111,8 @@ mod_MixedModel_ui <- function(id){
 #' @import sommer
 #' 
 #' @noRd 
+#' 
+# server part ----
 mod_MixedModel_server <- function(input, output, session){
   ns <- session$ns
   ## download input
@@ -180,6 +188,10 @@ mod_MixedModel_server <- function(input, output, session){
       choices_locations <- choices_locations_temp
       names(choices_locations) <- choices_locations_temp
       
+      choices_corte_temp <- unique(button1()[,"corte"])
+      choices_corte <- choices_corte_temp
+      names(choices_corte) <- choices_corte_temp
+      
       updateRadioButtons(session, "trait",
                          label="Choose the trait to be evaluated:",
                          choices = choices_trait,
@@ -187,8 +199,11 @@ mod_MixedModel_server <- function(input, output, session){
       
       updateCheckboxGroupInput(session, "local",
                                label="Choose the locations to be evaluated:",
-                               choices = choices_locations,
-                               selected = unlist(choices_locations)[1:2])
+                               choices = choices_locations)
+      
+      updateCheckboxGroupInput(session, "corte",
+                               label="Choose the harvest to be evaluated:",
+                               choices = choices_corte)
   })
   
   # defining the model as a factor
@@ -199,6 +214,8 @@ mod_MixedModel_server <- function(input, output, session){
       dat$block <- as.factor(dat$block)
       dat$gen <- as.factor(dat$gen)
       dat$local <- as.factor(dat$local)
+      dat$corte <- as.factor(dat$corte)
+      dat$peso <- as.double(dat$peso)
       
       if(input$design == "block"){
         if(!all(c("local", "block", "gen") %in% colnames(dat)) | ("rep" %in% colnames(dat)))
