@@ -80,8 +80,8 @@ mod_MixedModel_ui <- function(id){
                  hr(),
                  p("Define the model expression bellow. Here we used 'sommer' package to perform the analysis. Then, consider its syntax."),
                  p("If you uploaded the pedigree matrix above you can add it in the model with the symbol A."),
-                 textInput(ns("fixed"), label = p("Fixed:"), value = "phen1 ~ local"),
-                 textInput(ns("random"), label = p("Random:"), value = "~ gen + local:block + local:gen"),
+                 textInput(ns("fixed"), label = p("Fixed:"), value = "peso ~ local"),
+                 textInput(ns("random"), label = p("Random:"), value = "~ gen + local:gen"),
                  textInput(ns("rcov"), label = p("rcov:"), value = "~ units"), hr(),
                  # radioButtons(ns("rcov"), label = p("Choose the rcov to be evaluated:"), hr(),
                  #              choices = list("units" = "units", "vsr" = "vsr", "vsc" = "vsc"), 
@@ -220,7 +220,7 @@ mod_MixedModel_server <- function(input, output, session){
       if(input$design == "block"){
         if(!all(c("local", "block", "gen", "corte") %in% colnames(dat)) | ("rep" %in% colnames(dat)))
           stop(safeError("Randomized complete block design should have columns 'local', 'block' and 'gen'."))
-        dat <- dat %>% select(c("local", "gen", "block", "corte",input$trait)) %>%
+        dat <- dat %>% select(c("local", "gen", "block", "corte",input$trait)) %>% 
           filter(local %in% input$local) %>% droplevels()
         
       } else {
@@ -249,7 +249,6 @@ mod_MixedModel_server <- function(input, output, session){
       aic_bic <- data.frame(AIC = mod$AIC, BIC = mod$BIC)
       
       BLUPs <- data.frame(ID = names(mod$U$gen), BLUPs = mod$U$gen)
-      rownames(BLUPs) <- NULL
       
       incProgress(0.25, detail = paste("Doing part", 2))
       list(mod,summary_mod, aic_bic, BLUPs)
@@ -309,4 +308,3 @@ mod_MixedModel_server <- function(input, output, session){
 
 ## To be copied in the server
 # callModule(mod_MixedModel_server, "MixedModel_ui_1")
-
