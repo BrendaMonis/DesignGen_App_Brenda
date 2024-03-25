@@ -221,7 +221,8 @@ mod_MixedModel_server <- function(input, output, session){
         if(!all(c("local", "block", "gen", "corte") %in% colnames(dat)) | ("rep" %in% colnames(dat)))
           stop(safeError("Randomized complete block design should have columns 'local', 'block' and 'gen'."))
         dat <- dat %>% select(c("local", "gen", "block", "corte",input$trait)) %>% 
-          filter(local %in% input$local) %>% droplevels()
+          filter(local %in% input$local) %>% droplevels() #%>% 
+         # filter(corte %in% input$corte) %>% droplevels()
         
       } else {
         if(!all(c("local", "block", "gen", "corte") %in% colnames(dat)))
@@ -229,9 +230,11 @@ mod_MixedModel_server <- function(input, output, session){
         dat$rep <- as.factor(dat$rep)
         
         dat <- dat %>% select(c("local", "gen", "block","corte",input$trait)) %>%
-          filter(local %in% input$local) %>% droplevels()
+          filter(local %in% input$local) %>% droplevels() #%>% 
+         # filter(corte %in% input$corte) %>% droplevels()
         
         dat$local <- as.factor(dat$rep)
+        #dat$corte <- as.factor(dat$rep)
       }
       
       if(!is.null(input$pedigree)) A <- read.csv(input$pedigree$datapath, row.names = 1, header = T)
