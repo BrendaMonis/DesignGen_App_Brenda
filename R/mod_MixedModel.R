@@ -14,47 +14,58 @@ mod_MixedModel_ui <- function(id){
   tagList(
     fluidRow(style = "height:5000px",
              box(width = 12, 
-                 p("Run analysis with mixed models.")
+                 p(HTML("On this page, you can perform analyses using mixed models. Before starting your analysis, you can filter your data to meet your requirements. Once your analysis is complete, you can review or export previous results for future reference.
+                 <ul>
+                  Please keep the following points in mind:
+                 <ul>
+                 <li>Follow each step and press the button at the end of each one;</li>
+                 <li>If you select something incorrectly or wish to change, you can return to the specific section to modify it and proceed with the subsequent steps;</li>
+                 <li>The 'sommer' package performs the analysis, so its syntax should be considered.</li>
+                        </ul>"))
              ),
              
              # Choose the experiment design
              box(width = 12,
-                 selectInput(ns("design"), label = h4("Experiment design"), 
-                             choices = list("Randomized complete block" = "block", "Alpha lattice" = "lattice"), 
-                             selected = "block")
+                 h4("Experiment Design"),
+                 p("Please select the design used in your experimental data."), 
+                 selectInput(
+                   ns("design"), 
+                   label = NULL,
+                   choices = list("Randomized Complete Block Design" = "block", "Alpha Lattice Design" = "lattice"), 
+                   selected = "block"
+                 )
+            
              ),
              
              # Input the file
-             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Input file",
-                 p("The input file is a tab delimited table with a column called 'local' defining the environment, 
-                   other called 'gen' defining the genotypes and other called 'block' defining the block number. 
-                   The adjusted phenotypic means should be included in extra columns. Download here an input file example:"),
+             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Input File",
+                 p("If you don't have any data, you may download an example file to understand how the app works."),
                  downloadButton(ns("data_example")), hr(),
-                 p("Upload here your file:"),
-                 fileInput(ns("data_input"), label = h6("File: data.txt"), multiple = F),
-                 p("If you do not have an file to be upload you can still check this app features with our example file. The example file is automatically upload, you just need to procedure to the other buttons."),
+                 p("Please upload your data file here:"),
+                 fileInput(ns("data_input"), label = h6("Select file: .csv .xls .txt"), multiple = F), hr(),
+                 p("To proceed to the next step, please select the separator and then click the 'Load File' button 
+                   to ensure that your uploaded file or the example file is processed correctly."),
                  
-                 #Input Control
+                 # Input Control
                  hr(),
-                 p("Data View:"),
                  box(width = 4,
-                     radioButtons(ns("read_data1"), label = p("Select o separator"),
+                     radioButtons(ns("data_sep"), label = p("Choose the Separator:"),
                                   choices = list("Comma" = ",", "Semicolon" = ";", "Tab" = "\t"),
-                                  selected = ";")
+                                  selected = ",") 
+                 ), 
+                 box(width = 8, 
+                     uiOutput(ns("data_dynamic_view")),
                  ),
-                 box(width = 8,  
-                     #title = "Database",
-                     #data visualisation
-                     tableOutput(ns("dataview"))
-                 ),
+                 
                  # Read the file
                  hr(),
-                 actionButton(ns("read_data"), "Read the file",icon("refresh")), 
-                 hr(),
+                 actionButton(ns("data_load"), "Load file", icon("file-text")),
+                 br(),
+                 h6("Click here to proceed to the next step.")
              ),
              
              #Select variables
-             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Select variables",
+             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Select Variables",
                  box(width = 6,
                      radioButtons(ns("trait"), label = p("Choose the traits to be evaluated:"),
                                   choices = "Press 'Read the file' button to update",
@@ -73,34 +84,47 @@ mod_MixedModel_ui <- function(id){
              ),
              
              #Define the model
-             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Define the model:",
-                 p("If you want to consider a pedigree matrix, please submit an csv file as the example:"),
-                 downloadButton(ns("pedigree_example")), hr(),
-                 fileInput("pedigree", label = p("Pedigree matrix")),
+             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Define the Model",
+                 p("If you intend to include a pedigree matrix, please upload a .csv file following the example below."),
+                 downloadButton(ns("pedigree_example")), 
                  hr(),
-                 p("Define the model expression bellow. Here we used 'sommer' package to perform the analysis. Then, consider its syntax."),
-                 p("If you uploaded the pedigree matrix above you can add it in the model with the symbol A."),
-                 textInput(ns("fixed"), label = p("Fixed:"), value = "peso ~ local"),
-                 textInput(ns("random"), label = p("Random:"), value = "~ gen + local:gen"),
-                 textInput(ns("rcov"), label = p("rcov:"), value = "~ units"), hr(),
-                 # radioButtons(ns("rcov"), label = p("Choose the rcov to be evaluated:"), hr(),
-                 #              choices = list("units" = "units", "vsr" = "vsr", "vsc" = "vsc"), 
-                 #              selected = "units"),
+                 
+                 h4("Pedigree Matrix"),
+                 p("Please upload your pedigree file here:"),
+                 fileInput("pedigree", label = NULL),
+                 hr(),
+                 
+                 p("The analysis is performed using the 'sommer' package, so ensure your model adheres to its syntax. If you’ve uploaded a pedigree matrix, 
+                   include it in the model using the symbol A. Additionally, make sure to use the exact column names from your dataset when defining variables in the model."),
+                 p(HTML("For more details, please consult the
+                        <a href= 'https://www.rdocumentation.org/packages/sommer/versions/4.1.2/topics/mmer' target = '_blank' > R documentation. </a>")),
+                 hr(),
+                 
+                 textInput(ns("fixed"), label = p("Fixed:"), value = "Weight ~ Environment + Environment:Block"),
+                 textInput(ns("random"), label = p("Random:"), value = "~ Genotype + Environment:Genotype"),
+                 textInput(ns("rcov"), label = p("rcov:"), value = "~ units"), 
+                 hr(),
+
                  actionButton(ns("run_analysis"), "Run analysis",icon("refresh")), br(),
-                 p("Expand the windows above to access the results")
+                 p("Click here and then expand the 'Results' section to access the analyses.")
              ), hr(),
              
              # Results
              box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, status="info", title = "Results:",
-                 box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Variance components:",
+                 box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Variance Components:",
                      DT::dataTableOutput(ns("varcomp_out"))
                  ),
                  box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "AIC and BIC",
                      DT::dataTableOutput(ns("aic_bic_out"))
                  ),
                  box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "BLUPs",
+                    # box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Table Visualization",
                      DT::dataTableOutput(ns("blups_out"))
                  ),
+                 # Download
+                 #p("Click here to download the complete analysis data in '.RData' format.  
+                  # Once you import this into R or RStudio, an object named 'mixedmodel' will be created, enabling you to work with it."),
+                 #downloadButton(ns('download_rdata'), "Download .RData", class = "butt") 
              )
     )
   )
