@@ -373,12 +373,12 @@ mod_MixedModel_server <- function(input, output, session){
       rownames(BLUPs) <- NULL
       
       incProgress(0.25, detail = paste("Doing part", 2))
-      list(dat, mod,summary_mod, aic_bic, BLUPs)
+      list(mod, summary_mod, aic_bic, BLUPs)
     })
   })
   # Output for variance components
   output$varcomp_out <- DT::renderDataTable({
-    data <- data.frame(button3()[[2]]$varcomp)
+    dat <- data.frame(button3()[[2]]$varcomp)
     
     # Rounding of numbers
     decimal_places <- 2  
