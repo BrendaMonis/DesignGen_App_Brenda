@@ -12,7 +12,7 @@
 mod_MixedModel_ui <- function(id){ 
   ns <- NS(id)
   tagList(
-    fluidRow(style = "height:5000px",
+    fluidRow(style = "height:8000px",
              box(width = 12, 
                  p(HTML("On this page, you can perform analyses using mixed models. Before starting your analysis, you can filter your data to meet your requirements. Once your analysis is complete, you can review or export previous results for future reference.
                  <ul>
@@ -21,7 +21,7 @@ mod_MixedModel_ui <- function(id){
                  <li>Follow each step and press the button at the end of each one;</li>
                  <li>If you select something incorrectly or wish to change, you can return to the specific section to modify it and proceed with the subsequent steps;</li>
                  <li>The 'sommer' package performs the analysis, so its syntax should be considered.</li>
-                        </ul>"))
+                        </ul>")),
              ),
              
              # Choose the experiment design
@@ -31,7 +31,7 @@ mod_MixedModel_ui <- function(id){
                  selectInput(
                    ns("design"), 
                    label = NULL,
-                   choices = list("Randomized Complete Block Design" = "block", "Alpha Lattice Design" = "lattice"), 
+                   choices = list("Randomized Complete Block Design" = "block", "Alpha Lattice Design" = "lattice", "Split-Plot Design" = "Split"), 
                    selected = "block"
                  )
             
@@ -54,7 +54,7 @@ mod_MixedModel_ui <- function(id){
                                   selected = ",") 
                  ), 
                  box(width = 8, 
-                     uiOutput(ns("data_dynamic_view")),
+                     uiOutput(ns("data_dynamic_view"))
                  ),
                  
                  # Read the file
@@ -64,23 +64,47 @@ mod_MixedModel_ui <- function(id){
                  h6("Click here to proceed to the next step.")
              ),
              
-             #Select variables
-             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Select Variables",
-                 box(width = 6,
-                     radioButtons(ns("trait"), label = p("Choose the traits to be evaluated:"),
-                                  choices = "Press 'Read the file' button to update",
-                                  selected = "Press 'Read the file' button to update"),
+             # Data Filtering
+             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status = "primary", title = "Data Filtering",
+                 box(width = 12,
+                     radioButtons(ns("filter_choice"), label = p("Do you need to filter your data?"),
+                                  choices = c("Yes", "No"),
+                                  selected = "No"),
+                     p("If you don't need to filter your data, just press the 'Data Filters' button and continue with the next steps.")
                  ),
-                 box(width = 6,
-                     checkboxGroupInput(ns("local"), label = p("Choose the location to be evaluated:"),
-                                        choices = "Press 'Read the file' button to update",
-                                        selected = "Press 'Read the file' button to update")
+                 
+                 uiOutput(ns("filter_dynamic_factor")),
+                 br(),
+                 uiOutput(ns("filter_dynamic_button")),
+                 br(),
+                 uiOutput(ns("filter_dynamic_level")),
+                 
+                 actionButton(ns("filter_ready"), "Filter Data", icon("filter")),
+                 br(),
+                 h6("Click here to proceed to the next step")
+             ),
+             
+             # Choose Parameters
+             box(width = 12, solidHeader = TRUE, collapsible = TRUE, status="primary", title = "Select parameters",
+                 box(width = 4,
+                     radioButtons(ns("trait"), label = p("Choose the trait to be evaluated:"),
+                                  choices = "Press 'Filter Data' button to update",
+                                  selected = "Press 'Filter Data' button to update"),
                  ),
-                 box(width = 6,
-                     checkboxGroupInput(ns("corte"), label = p("Choose the harvest to be evaluated:"),
-                                        choices = "Press 'Read the file' button to update",
-                                        selected = "Press 'Read the file' button to update")
-                 )
+                 box(width = 4,
+                     radioButtons(ns("fixed_ef"), label = p("Choose the fixed effect to be evaluated:"),
+                                  choices = "Press 'Data Filters' button to update",
+                                  selected = "Press 'Data Filters' button to update")
+                 ),
+                 box(width = 4,
+                     radioButtons(ns("random_ef"), label = p("Choose the random effect to be evaluated:"),
+                                  choices = "Press 'Data Filters' button to update",
+                                  selected = "Press 'Data Filters' button to update")
+                 ),
+                 hr(),
+                 actionButton(ns("parameter_choice"), "Model Parameters", icon("check")),
+                 br(),
+                 h6("Click here to proceed to the next step")
              ),
              
              #Define the model
@@ -105,8 +129,8 @@ mod_MixedModel_ui <- function(id){
                  textInput(ns("rcov"), label = p("rcov:"), value = "~ units"), 
                  hr(),
 
-                 actionButton(ns("run_analysis"), "Run analysis",icon("refresh")), br(),
-                 p("Click here and then expand the 'Results' section to access the analyses.")
+                 actionButton(ns("analysis_run"), "Run analysis",icon("refresh")), br(),
+                 h6("Click here and then expand the 'Results' section to access the analyses.")
              ), hr(),
              
              # Results
@@ -118,13 +142,13 @@ mod_MixedModel_ui <- function(id){
                      DT::dataTableOutput(ns("aic_bic_out"))
                  ),
                  box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "BLUPs",
-                    # box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Table Visualization",
-                     DT::dataTableOutput(ns("blups_out"))
-                 ),
+                     box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Table Visualization",
+                     DT::dataTableOutput(ns("blups_table_out"))
+                 )),
                  # Download
-                 #p("Click here to download the complete analysis data in '.RData' format.  
-                  # Once you import this into R or RStudio, an object named 'mixedmodel' will be created, enabling you to work with it."),
-                 #downloadButton(ns('download_rdata'), "Download .RData", class = "butt") 
+                 p("Click here to download the complete analysis data in '.RData' format.  
+                    Once you import this into R or RStudio, an object named 'mixedmodel' will be created, enabling you to work with it."),
+                 downloadButton(ns('download_rdata'), "Download .RData", class = "butt") 
              )
     )
   )
@@ -136,133 +160,205 @@ mod_MixedModel_ui <- function(id){
 #' 
 #' @noRd 
 #' 
-# server part ----
+#Server part ----
 mod_MixedModel_server <- function(input, output, session){
   ns <- session$ns
-  ## download input
+  
+  # Download input
   output$data_example <- downloadHandler(
     filename =  function() {
       paste("example_data.csv")
     },
-    # content is a function with argument file. content writes the plot to the device
+    
     content = function(file) {
       if(input$design == "block"){
         dat <- read.csv(system.file("ext","example_inputs/example_blocks.csv", package = "StatGenESALQ"))
-      } else {
+      } else if (input$design == "lattice") {
         dat <- read.csv(system.file("ext","example_inputs/example_lattice.csv", package = "StatGenESALQ"))
+      } else {
+        dat <- read.csv(system.file("ext","example_inputs/example_split.csv", package = "StatGenESALQ"))
       }
       write.csv(dat, file = file, row.names = F)
     } 
   )
   
-  # Data processing using .txt and .csv files.
-  observeEvent(input$read_data1, {
-    observeEvent(input$data_input, {
+  # Data processing using .csv .xls .txt files.
+  observeEvent(input$data_sep, {
+    output$data_dynamic_view <- renderUI({
       if (is.null(input$data_input)) {
-        output$dataview <- renderTable({
-          return(p("Upload your data"))
+        output$dataview <- renderUI({
+          return(p("Please upload your file to update this section."))
         })
       } else {
-        df <- read.csv(input$data_input$datapath, sep = input$read_data1)
+        dat <- read.csv(input$data_input$datapath, sep = input$data_sep)
         output$dataview <- renderTable({
-          return(head(df))
+          return(head(dat))
         })
       }
     })
   })  
   
-  
-  ## download pedigree
+  # Download pedigree
   output$pedigree_example <- downloadHandler(
     filename =  function() {
       paste("pedigree.csv")
     },
-    # content is a function with argument file. content writes the plot to the device
     content = function(file) {
       dat <- read.csv(system.file("ext","example_inputs/example_pedigree.csv", package = "StatGenESALQ"), row.names = 1, header = T)
       write.csv(dat, file = file)
     } 
   )
-  
-  button1 <- eventReactive(input$read_data, {
+
+  # Data Loading  
+  button1 <- eventReactive(input$data_load, {
     if (is.null(input$data_input$datapath)) {
       if(input$design == "block"){
         dat <- read.csv(system.file("ext","example_inputs/example_blocks.csv", package = "StatGenESALQ"))
-      } else {
+      } else if (input$design == "lattice") {
         dat <- read.csv(system.file("ext","example_inputs/example_lattice.csv", package = "StatGenESALQ"))
+      } else {
+        dat <- read.csv(system.file("ext","example_inputs/example_split.csv", package = "StatGenESALQ"))
       }
     } else {
-      dat <- read.csv(input$data_input$datapath, sep = input$read_data1)
+      dat <- read.csv(input$data_input$datapath, sep = input$data_sep)
     }
     cat(colnames(dat))
     dat
   })
   
-  observe({
-    
-    if(any(colnames(button1()) %in% "rep"))
-      choices_trait_temp <- colnames(button1())[-c(1:4)] else
-        choices_trait_temp <- colnames(button1())[-c(1:3)]
+  # Dynamic UI for filtering data
+  observeEvent(input$data_load, {
+    output$filter_dynamic_factor <- renderUI({
+      req(input$filter_choice == "Yes")
+      data_names <- colnames(button1())
       
-      #Choose the trait and the location   
-      choices_trait <- choices_trait_temp
-      names(choices_trait) <- choices_trait_temp
-      
-      choices_locations_temp <- unique(button1()[,"local"])
-      choices_locations <- choices_locations_temp
-      names(choices_locations) <- choices_locations_temp
-      
-      choices_corte_temp <- unique(button1()[,"corte"])
-      choices_corte <- choices_corte_temp
-      names(choices_corte) <- choices_corte_temp
-      
-      updateRadioButtons(session, "trait",
-                         label="Choose the trait to be evaluated:",
-                         choices = choices_trait,
-                         selected = unlist(choices_trait)[1])
-      
-      updateCheckboxGroupInput(session, "local",
-                               label="Choose the locations to be evaluated:",
-                               choices = choices_locations)
-      
-      updateCheckboxGroupInput(session, "corte",
-                               label="Choose the harvest to be evaluated:",
-                               choices = choices_corte)
+      box(width = 12,
+          checkboxGroupInput(ns("factor"), label = p("Choose the factors to be filtered:"),
+                             choices = data_names,
+                             selected = data_names[1])
+      )
+    })
+    showNotification("Data loaded")
   })
   
-  # defining the model as a factor
-  button2 <- eventReactive(input$run_analysis, {
-    withProgress(message = 'Building graphic', value = 0, {
-      incProgress(0, detail = paste("Doing part", 1))
+  observeEvent(input$data_load, {
+    output$filter_dynamic_button <- renderUI({
+      req(input$filter_choice == "Yes")
       dat <- button1()
-      dat$block <- as.factor(dat$block)
-      dat$gen <- as.factor(dat$gen)
-      dat$local <- as.factor(dat$local)
-      dat$corte <- as.factor(dat$corte)
-      dat$peso <- as.double(dat$peso)
       
-      if(input$design == "block"){
-        if(!all(c("local", "block", "gen", "corte") %in% colnames(dat)) | ("rep" %in% colnames(dat)))
-          stop(safeError("Randomized complete block design should have columns 'local', 'block' and 'gen'."))
-        dat <- dat %>% select(c("local", "gen", "block", "corte",input$trait)) %>% 
-          filter(local %in% input$local) %>% droplevels() #%>% 
-         # filter(corte %in% input$corte) %>% droplevels()
-        
-      } else {
-        if(!all(c("local", "block", "gen", "corte") %in% colnames(dat)))
-          stop(safeError("Alpha lattice design should have columns 'local', 'block', 'rep', and 'gen'."))
-        dat$rep <- as.factor(dat$rep)
-        
-        dat <- dat %>% select(c("local", "gen", "block","corte",input$trait)) %>%
-          filter(local %in% input$local) %>% droplevels() #%>% 
-         # filter(corte %in% input$corte) %>% droplevels()
-        
-        dat$local <- as.factor(dat$rep)
-        #dat$corte <- as.factor(dat$rep)
+      actionButton(ns("filter_in_process"), "Select levels", icon("plus"))
+    })
+  })
+  
+  # Reactive filter data
+  observeEvent(input$data_load, {
+    output$filter_dynamic_level <- renderUI({
+      req(input$filter_choice == "Yes")
+      
+      num <- length(input$factor)
+      col_names <- input$factor
+      
+      lapply(seq_len(num), function(i) {
+        box(width = 12,
+            checkboxGroupInput(ns(paste0("filter", i)),
+                               label = paste0("Choose the levels from '", col_names[i], "' to be filtered:"),
+                               choices = "Press 'Select levels' button to update")
+        )
+      })
+    })
+  })
+  
+  observeEvent(input$filter_in_process, {
+    req(input$filter_choice == "Yes")
+    
+    dat <- button1()
+    if (length(input$factor) > 0) {
+      n <- length(input$factor)
+      for (i in 1:n) {
+        dat[[input$factor[i]]] <- as.factor(dat[[input$factor[i]]])
+      }
+    }
+    
+    num <- length(input$factor)
+    col_names <- input$factor
+    
+    lapply(seq_len(num), function(i) {
+      if(is.factor(dat[[input$factor[i]]])) {
+        box(width = 12,
+            updateCheckboxGroupInput(session, paste0("filter", i),
+                                     label = paste0("Choose the levels from '", col_names[i], "' to be filtered:"),
+                                     choices = unique(dat[[input$factor[i]]]))
+        )
+      }
+    })
+  })
+  
+  # Data Filtering
+  button2 <- eventReactive(input$filter_ready, {
+    if(input$filter_choice == "Yes") {
+      dat <- button1()
+      if (length(input$factor) > 0) {
+        n <- length(input$factor)
+        for (i in 1:n) {
+          dat[[input$factor[i]]] <- as.factor(dat[[input$factor[i]]])
+        }
       }
       
-      if(!is.null(input$pedigree)) A <- read.csv(input$pedigree$datapath, row.names = 1, header = T)
+      num <- length(input$factor)
+      col_names <- input$factor
       
+      for (i in 1:num) {
+        dat <- dat %>%
+          filter(dat[[input$factor[i]]] %in% c(input[[paste0("filter", i)]])) %>%
+          droplevels()
+      }
+      dat
+    } else {
+      dat <- button1()
+      dat
+    }
+  })
+  
+  # Update choices for analysis
+  observeEvent(input$filter_ready, {
+    data_names <- colnames(button1())
+    
+    updateRadioButtons(session, "trait",
+                       label="Choose the trait to be evaluated:",
+                       choices = data_names,
+                       selected = unlist(data_names)[1])
+    
+    updateRadioButtons(session, "fixed_ef",
+                       label="Choose the fixed effect to be evaluated:",
+                       choices = data_names)
+    
+    updateRadioButtons(session, "random_ef",
+                       label="Choose the random effect to be evaluated:",
+                       choices = data_names)
+  })
+  
+  observeEvent(input$parameter_choice, {
+    showNotification("Parameters chosen")
+  })
+  
+  # Analysis function
+  button3 <- eventReactive(input$analysis_run, {
+    withProgress(message = 'Building analysis', value = 0, {
+      incProgress(0, detail = paste("Doing part", 1))
+      req(input$parameter_choice)
+      dat <- button2()
+      
+      if (ncol(dat) > 0) {
+        n <- ncol(dat)
+        for (i in 1:n) {
+          if (colnames(dat)[i] == input$trait) {
+            dat[, i] <- as.double(dat[, i])
+          } else {
+            dat[, i] <- as.factor(dat[, i])
+          }
+        }
+      } 
+      if(!is.null(input$pedigree)) A <- read.csv(input$pedigree$datapath, row.names = 1, header = T)
       
       # Input the model
       mod <- mmer(fixed = as.formula(input$fixed), 
@@ -272,62 +368,99 @@ mod_MixedModel_server <- function(input, output, session){
       
       # Results
       summary_mod <- summary(mod)
-      
       aic_bic <- data.frame(AIC = mod$AIC, BIC = mod$BIC)
-      
-      BLUPs <- data.frame(ID = names(mod$U$gen), BLUPs = mod$U$gen)
+      BLUPs <- data.frame(ID = levels(dat[[input$random_ef]]), BLUPs = mod$U[[input$random_ef]])
+      rownames(BLUPs) <- NULL
       
       incProgress(0.25, detail = paste("Doing part", 2))
-      list(mod,summary_mod, aic_bic, BLUPs)
+      list(dat, mod,summary_mod, aic_bic, BLUPs)
     })
   })
-  
+  # Output for variance components
   output$varcomp_out <- DT::renderDataTable({
-    data <- data.frame(button2()[[2]]$varcomp)
+    data <- data.frame(button3()[[2]]$varcomp)
     
-    # Especifique as colunas que deseja arredondar e o número de casas decimais
-    # columns_to_round <- c("Sum.Sq", "Mean.Sq", "F.value", "Pr..F.", "outra_coluna1", "outra_coluna2")
-    decimal_places1 <- 4  # Especifique o número de casas decimais
-    
-    # Arredonde as colunas selecionadas
+    # Rounding of numbers
+    decimal_places <- 2  
     for (col in 1:3) {
-      data[[col]] <- round(as.numeric(data[[col]]), decimal_places1)
+      dat[[col]] <- round(as.numeric(dat[[col]]), decimal_places)
     }
     
-    # decimal_places1 <- 5
-    # for (col in 5) {
-    #   data[[col]] <- round(as.numeric(data[[col]]), decimal_places1)
-    # }
-    
-    # Outputs
-    DT::datatable(data,  
+    DT::datatable(dat,  
                   extensions = 'Buttons',
                   options = list(
                     dom = 'Bfrtlp',
-                    buttons = c('copy', 'csv', 'excel', 'pdf')
+                    buttons = c('copy', 'csv', 'excel', 'pdf'),
+                    columnDefs = list(list(className = 'dt-center', targets = '_all')) # Centralize
                   ),
                   class = "display")
   })
-  
-  output$aic_bic_out <- DT::renderDataTable(
-    DT::datatable(data.frame(button2()[[3]]),  
+      
+  # Output for AIC and BIC
+  output$aic_bic_out <- DT::renderDataTable({
+    dat <- data.frame(button3()[[3]])
+
+    # Rounding of numbers
+    decimal_places <- 2  
+    for (col in 1:2) {
+      dat[[col]] <- round(as.numeric(dat[[col]]), decimal_places)
+    }
+    
+    DT::datatable(dat,
+                  rownames = FALSE,
                   extensions = 'Buttons',
                   options = list(
                     dom = 'Brt',
-                    buttons = c('copy', 'csv', 'excel', 'pdf')
+                    buttons = c('copy', 'csv', 'excel', 'pdf'),
+                    columnDefs = list(list(className = 'dt-center', targets = '_all')) # Centralize
                   ),
                   class = "display")
-  )
-  
-  output$blups_out <- DT::renderDataTable(
-    DT::datatable(data.frame(button2()[[4]]),  
+  })
+
+  # Output for BLUPs - Table
+  output$blups_table_out <- DT::renderDataTable({
+    dat <- data.frame(button3()[[4]])  
+
+    # Rounding of numbers
+    decimal_places <- 2  
+    for (col in 2) {
+      dat[[col]] <- round(as.numeric(dat[[col]]), decimal_places)
+    }
+    
+    DT::datatable(dat,
+                  rownames = TRUE,
                   extensions = 'Buttons',
                   options = list(
                     dom = 'Bfrtlp',
-                    buttons = c('copy', 'csv', 'excel', 'pdf')
+                    buttons = c('copy', 'csv', 'excel', 'pdf'),
+                    columnDefs = list(list(className = 'dt-center', targets = '_all')) # Centralize
                   ),
                   class = "display")
-  )
+  })    
+  
+  # Download results
+  r_downloadname <- reactive({
+    seed <- sample(1:10,1)
+    filename <- paste0("mixedmodel","_",seed,".RData")
+    return(filename)
+  })
+  
+  r_download <- function() {
+    mixedmodel <- button3()[[1]]
+    save(mixedmodel, file = r_downloadname())
+  }
+  
+  # download handler
+  observeEvent(input$analysis_run, {
+    output$download_rdata <- downloadHandler(
+      filename = r_downloadname,
+      content = function(file) {
+        r_download()
+        file.copy(r_downloadname(), file, overwrite=T)
+        file.remove(r_downloadname())
+      }
+    )
+  })
 }
 
 ## To be copied in the UI
