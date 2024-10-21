@@ -142,9 +142,8 @@ mod_MixedModel_ui <- function(id){
                      DT::dataTableOutput(ns("aic_bic_out"))
                  ),
                  box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "BLUPs",
-                     box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Table Visualization",
                      DT::dataTableOutput(ns("blups_table_out"))
-                 )),
+                 ),
                  # Download
                  p("Click here to download the complete analysis data in '.RData' format.  
                     Once you import this into R or RStudio, an object named 'mixedmodel' will be created, enabling you to work with it."),
