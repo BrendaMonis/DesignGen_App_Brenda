@@ -135,7 +135,7 @@ mod_MixedModel_ui <- function(id){
              
              # Results
              box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, status="info", title = "Results:",
-                 box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Variance Components:",
+                 box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "Variance Components",
                      DT::dataTableOutput(ns("varcomp_out"))
                  ),
                  box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "AIC and BIC",
@@ -348,15 +348,15 @@ mod_MixedModel_server <- function(input, output, session){
       dat <- button2()
       
       if (ncol(dat) > 0) {
-        n <- ncol(dat)
-        for (i in 1:n) {
-          if (colnames(dat)[i] == input$trait) {
-            dat[, i] <- as.double(dat[, i])
+        for (col_name in colnames(dat)) {
+          if (col_name == input$trait) {
+            dat[[col_name]] <- as.double(dat[[col_name]])
           } else {
-            dat[, i] <- as.factor(dat[, i])
+            dat[[col_name]] <- as.factor(dat[[col_name]])
           }
         }
-      } 
+      }
+      
       if(!is.null(input$pedigree)) A <- read.csv(input$pedigree$datapath, row.names = 1, header = T)
       
       # Input the model
@@ -370,11 +370,13 @@ mod_MixedModel_server <- function(input, output, session){
       aic_bic <- data.frame(AIC = mod$AIC, BIC = mod$BIC)
       BLUPs <- data.frame(ID = levels(dat[[input$random_ef]]), BLUPs = mod$U[[input$random_ef]])
       rownames(BLUPs) <- NULL
+
       
       incProgress(0.25, detail = paste("Doing part", 2))
       list(mod, summary_mod, aic_bic, BLUPs)
     })
   })
+  
   # Output for variance components
   output$varcomp_out <- DT::renderDataTable({
     dat <- data.frame(button3()[[2]]$varcomp)
@@ -419,7 +421,7 @@ mod_MixedModel_server <- function(input, output, session){
   # Output for BLUPs - Table
   output$blups_table_out <- DT::renderDataTable({
     dat <- data.frame(button3()[[4]])  
-
+    
     # Rounding of numbers
     decimal_places <- 2  
     for (col in 2) {
