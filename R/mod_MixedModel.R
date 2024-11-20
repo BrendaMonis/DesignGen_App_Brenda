@@ -34,7 +34,7 @@ mod_MixedModel_ui <- function(id){
                    choices = list("Randomized Complete Block Design" = "block", "Alpha Lattice Design" = "lattice", "Split-Plot Design" = "Split"), 
                    selected = "block"
                  )
-            
+                 
              ),
              
              # Input the file
@@ -128,7 +128,7 @@ mod_MixedModel_ui <- function(id){
                  textInput(ns("random"), label = p("Random:"), value = "~ Genotype + Environment:Genotype"),
                  textInput(ns("rcov"), label = p("rcov:"), value = "~ units"), 
                  hr(),
-
+                 
                  actionButton(ns("analysis_run"), "Run analysis",icon("refresh")), br(),
                  h6("Click here and then expand the 'Results' section to access the analyses.")
              ), hr(),
@@ -144,6 +144,43 @@ mod_MixedModel_ui <- function(id){
                  box(width = 12, solidHeader = TRUE, collapsible = TRUE, collapsed = T, title = "BLUPs",
                      DT::dataTableOutput(ns("blups_table_out"))
                  ),
+                 
+                 # -----------------------------
+                 box(width = 12, solidHeader = TRUE, status="info", title = "Select the Random Effect Variables:", #
+                     selectInput(
+                       inputId = ns("genotypes"),
+                       label = h6("Random Effect Variables:"), #
+                       choices = "This will be updated",
+                       selected = "This will be updated",
+                       multiple = TRUE
+                     ),
+                     actionButton(ns("plot_ready"), "Run plots", icon("graph")),
+                 ),
+                 
+                 box(id = ns("box_int"), width = 12, solidHeader = TRUE, collapsible = TRUE,  collapsed = FALSE, status="primary", title = actionLink(inputId = ns("intID"), label = "Interaction Graph"),
+                     column(12,
+                            column(3,
+                                   tags$head(tags$style(".butt{background-color:#add8e6; border-color: #add8e6; color: #337ab7;}")),
+                                   downloadButton(ns('bn_download'), "Download", class = "butt")
+                            ),
+                            column(3,
+                                   radioButtons(ns("fformat"), "File type", choices=c("png","tiff","jpeg","pdf", "RData"), selected = "png", inline = T)
+                            ),                     
+                            column(2,
+                                   numericInput(ns("width_int"), "Width (mm)", value = 180),
+                            ),
+                            column(2,
+                                   numericInput(ns("height_int"), "Height (mm)", value = 120),
+                            ),
+                            column(2,
+                                   numericInput(ns("dpi_int"), "DPI", value = 300)
+                            )), br(), 
+                     column(12,
+                            hr(),
+                            plotOutput(ns("plot_int"))
+                            
+                            # -----------------------------
+                     )),
                  # Download
                  p("Click here to download the complete analysis data in '.RData' format.  
                     Once you import this into R or RStudio, an object named 'mixedmodel' will be created, enabling you to work with it."),
@@ -165,7 +202,7 @@ mod_MixedModel_server <- function(input, output, session){
   
   # Download input
   output$data_example <- downloadHandler(
-    filename =  function() {
+    filename = function() {
       paste("example_data.csv")
     },
     
@@ -199,7 +236,7 @@ mod_MixedModel_server <- function(input, output, session){
   
   # Download pedigree
   output$pedigree_example <- downloadHandler(
-    filename =  function() {
+    filename = function() {
       paste("pedigree.csv")
     },
     content = function(file) {
@@ -207,7 +244,7 @@ mod_MixedModel_server <- function(input, output, session){
       write.csv(dat, file = file)
     } 
   )
-
+  
   # Data Loading  
   button1 <- eventReactive(input$data_load, {
     if (is.null(input$data_input$datapath)) {
@@ -340,6 +377,22 @@ mod_MixedModel_server <- function(input, output, session){
     showNotification("Parameters chosen")
   })
   
+  # -----------------------------
+  
+  observeEvent(input$analysis_run, {
+    dat <- button1()
+    gen_choices <- as.list(unique(dat[[input$random_ef]]))
+    names(gen_choices) <- unique(dat[[input$random_ef]])
+    
+    updateSelectInput(session = session,
+                      inputId = "genotypes",
+                      label = "Random Effect Variables:",
+                      choices = gen_choices,
+                      selected=unlist(gen_choices)[1])
+  })
+  
+  ##### -----------------------------
+  
   # Analysis function
   button3 <- eventReactive(input$analysis_run, {
     withProgress(message = 'Building analysis', value = 0, {
@@ -370,7 +423,6 @@ mod_MixedModel_server <- function(input, output, session){
       aic_bic <- data.frame(AIC = mod$AIC, BIC = mod$BIC)
       BLUPs <- data.frame(ID = levels(dat[[input$random_ef]]), BLUPs = mod$U[[input$random_ef]])
       rownames(BLUPs) <- NULL
-
       
       incProgress(0.25, detail = paste("Doing part", 2))
       list(mod, summary_mod, aic_bic, BLUPs)
@@ -392,15 +444,15 @@ mod_MixedModel_server <- function(input, output, session){
                   options = list(
                     dom = 'Bfrtlp',
                     buttons = c('copy', 'csv', 'excel', 'pdf'),
-                    columnDefs = list(list(className = 'dt-center', targets = '_all')) # Centralize
+                    columnDefs = list(list(className = 'dt-center', targets = '_all')) 
                   ),
                   class = "display")
   })
-      
+  
   # Output for AIC and BIC
   output$aic_bic_out <- DT::renderDataTable({
     dat <- data.frame(button3()[[3]])
-
+    
     # Rounding of numbers
     decimal_places <- 2  
     for (col in 1:2) {
@@ -413,11 +465,11 @@ mod_MixedModel_server <- function(input, output, session){
                   options = list(
                     dom = 'Brt',
                     buttons = c('copy', 'csv', 'excel', 'pdf'),
-                    columnDefs = list(list(className = 'dt-center', targets = '_all')) # Centralize
+                    columnDefs = list(list(className = 'dt-center', targets = '_all')) 
                   ),
                   class = "display")
   })
-
+  
   # Output for BLUPs - Table
   output$blups_table_out <- DT::renderDataTable({
     dat <- data.frame(button3()[[4]])  
@@ -434,10 +486,101 @@ mod_MixedModel_server <- function(input, output, session){
                   options = list(
                     dom = 'Bfrtlp',
                     buttons = c('copy', 'csv', 'excel', 'pdf'),
-                    columnDefs = list(list(className = 'dt-center', targets = '_all')) # Centralize
+                    columnDefs = list(list(className = 'dt-center', targets = '_all')) 
                   ),
                   class = "display")
   })    
+  
+  # -----------------------------
+  
+  output$plot_int <- renderPlot({
+    
+    req(input$plot_ready)
+    
+    withProgress(message = 'Working:', value = 0, {
+      incProgress(0.3, detail = "building graphic...")
+      
+      dat <- button1()
+      GEI <- dat %>%
+        group_by(.data[[input$fixed_ef]], .data[[input$random_ef]]) %>%
+        summarise(
+          Trait = mean(.data[[input$trait]], na.rm = TRUE),
+          .groups = "drop"
+        )
+      print(GEI)
+      
+      # Ordering
+      index <- order(GEI$Trait, decreasing = FALSE)
+      GEI <- GEI[index,]
+      
+      ggplot(GEI, aes(x = .data[[input$fixed_ef]], y = Trait)) +
+        geom_line(
+          linewidth = 0.8, 
+          aes(
+            group = .data[[input$random_ef]], 
+            color = .data[[input$random_ef]], 
+            alpha = ifelse(.data[[input$random_ef]] %in% input$genotypes, 1, 0.7)
+          )
+        ) +
+        labs(
+          title = "Graphic Visualization of Interaction",
+          x = input$fixed_ef,  
+          y = paste("Average", input$trait)
+        ) +
+        guides(
+          color = guide_legend(title = input$random_ef, ncol = 1), 
+          alpha = "none"
+        ) +
+        theme_bw() +
+        scale_color_manual(
+          values = scales::hue_pal()(length(unique(input$genotypes))),
+          limits = input$genotypes,
+          breaks = input$genotypes
+        )
+      
+      
+    })
+  })
+  
+  # Output Graph
+  output$mean_graph_out <- renderPlot({
+    dat <- data.frame(button3()[[5]])
+    
+    observe({
+      random_effects <- names(dat)  
+      updateSelectInput(session, "random_ef", 
+                        choices = random_effects, 
+                        selected = NULL)  
+    })
+    
+    observeEvent(input$filter_random_ready, {
+      req(input$random_ef)  
+      
+      gen_var <- input$random_ef
+      dat_filtered <- dat[dat[[gen_var]] %in% input$random_ef, ]
+      
+      x_var <- input$fixed_ef   
+      y_var <- input$trait 
+      
+      dat[[x_var]] <- as.factor(dat[[x_var]])  
+      dat[[y_var]] <- as.numeric(dat[[y_var]])  
+      
+      ggplot(dat, 
+             aes_string(x = dat[[x_var]], y = dat[[y_var]])) +
+        geom_line(linewidth = 0.8, aes(group = gen_var, color = gen_var, 
+                                       alpha = ifelse(dat[[gen_var]] %in% input$selected_vars, 1, 0.7))) +
+        labs(title = "Graphic Visualization of Interaction",
+             x = input$fixed_ef,  
+             y = input$trait) +
+        guides(color = guide_legend(title = "Selected Random Effect", ncol = 1), alpha = "none") +
+        theme_bw() +
+        scale_color_manual(values = colors,
+                           limits = input$selected_vars,
+                           breaks = input$selected_vars)
+    })
+  })
+  
+  # -----------------------------
   
   # Download results
   r_downloadname <- reactive({
@@ -463,6 +606,7 @@ mod_MixedModel_server <- function(input, output, session){
     )
   })
 }
+
 
 ## To be copied in the UI
 # mod_MixedModel_ui("MixedModel_ui_1")
